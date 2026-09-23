@@ -6,25 +6,36 @@ defmodule TallyHo.Usage do
   alias TallyHo.Repo
   alias TallyHo.Usage.Event
 
-  @doc """
-  Ingests an event with idempotency protection.
-  Returns:
-    - {:ok, %Event{}} on success
-    - {:error, %Ecto.Changeset{}} on validation or duplicate idempotency_key
-  """
+  @topic_prefix "customer_usage:"
+
+  def subscribe_customer(customer_id) do
+    Phoenix.PubSub.subscribe(TallyHo.PubSub, @topic_prefix <> customer_id)
+  end
+
   def ingest_event(attrs \\ %{}) do
     %Event{}
     |> Event.changeset(attrs)
     |> Repo.insert()
+    |> case do
+      {:ok, event} = success ->
+        Phoenix.PubSub.broadcast(
+          TallyHo.PubSub,
+          @topic_prefix <> event.customer_id,
+          {:event_ingested, event}
+        )
+
+        success
+
+      error ->
+        error
+    end
   end
 
-  @doc """
-  Returns all events for a customer within an optional timestamp range.
-  """
-  def list_customer_events(customer_id) do
+  def list_customer_events(customer_id, limit \\ 50) do
     Event
     |> where([e], e.customer_id == ^customer_id)
-    |> order_by([e], desc: e.timestamp)
+    |> order_by([e], desc: e.timestamp, desc: e.inserted_at)
+    |> limit(^limit)
     |> Repo.all()
   end
 end

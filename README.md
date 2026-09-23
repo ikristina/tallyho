@@ -38,11 +38,46 @@ mix setup        # install deps, create DB, run migrations
 mix phx.server   # start at localhost:4000
 ```
 
-Or inside IEx (interactive Elixir REPL):
+Visit the dashboard in your browser:
+- **Dashboard:** [http://localhost:4000/dashboard/cust_123](http://localhost:4000/dashboard/cust_123)
+
+Or start inside IEx (interactive Elixir REPL + server):
 
 ```bash
 iex -S mix phx.server
 ```
+
+## Running Tests
+
+```bash
+mix test                       # run all unit and integration tests
+mix precommit                  # compile warnings check + format + tests
+```
+
+## API Usage
+
+### Ingest Usage Event
+
+```bash
+curl -X POST http://localhost:4000/api/events \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "cust_123",
+    "metric": "api_requests",
+    "quantity": 2500,
+    "idempotency_key": "evt_test_001"
+  }'
+```
+
+**Supported Metrics & Pricing:**
+- `api_requests`: $0.001 / request
+- `storage_gb`: $0.05 / GB
+- `compute_hours`: $0.10 / hour
+
+**Responses:**
+- `201 Created`: Event recorded and broadcast to LiveView over PubSub.
+- `409 Conflict`: Duplicate `idempotency_key` — protects against double-billing.
+- `422 Unprocessable Entity`: Validation failure with field errors.
 
 ## Troubleshooting
 
@@ -52,8 +87,10 @@ iex -S mix phx.server
 createuser -s postgres
 ```
 
-## Learn more
+## Architecture
 
-- [Phoenix docs](https://phoenix.hexdocs.pm)
-- [Phoenix guides](https://phoenix.hexdocs.pm/overview.html)
-- [Elixir docs](https://hexdocs.pm/elixir)
+- **Web Layer:** Phoenix Endpoint, Router, and Controller for JSON API.
+- **Real-Time UI:** Phoenix LiveView with `Phoenix.PubSub` and LiveView Streams.
+- **Persistence:** Ecto schema with UUIDs (`binary_id`) and unique database index on `idempotency_key`.
+- **Billing Engine:** Pure functional module using `Decimal` for exact arbitrary-precision arithmetic.
+
