@@ -94,3 +94,34 @@ createuser -s postgres
 - **Persistence:** Ecto schema with UUIDs (`binary_id`) and unique database index on `idempotency_key`.
 - **Billing Engine:** Pure functional module using `Decimal` for exact arbitrary-precision arithmetic.
 
+## Production Deployment (Fly.io)
+
+- **Live URL:** [https://tallyho.fly.dev/dashboard/cust_123](https://tallyho.fly.dev/dashboard/cust_123)
+- **Live Ingest API:** `POST https://tallyho.fly.dev/api/events`
+
+### Deploying Your Own Instance
+
+To deploy this project to your own Fly.io account:
+
+1. **Install Fly CLI & Authenticate:**
+   ```bash
+   brew install flyctl
+   fly auth login
+   ```
+
+2. **Launch Application & Provision Database:**
+   ```bash
+   fly launch --no-deploy
+   ```
+   - Choose a unique app name.
+   - When prompted for Postgres, select Unmanaged / Development Postgres (single node) to remain within Fly's free tier.
+
+3. **Deploy:**
+   ```bash
+   fly deploy
+   ```
+   - Database migrations run automatically during rollout via the `/app/bin/migrate` release command.
+   - `fly.toml` is configured with `auto_stop_machines = 'stop'` and `min_machines_running = 0` so idle machines spin down to 0 for zero ongoing cost.
+
+
+
