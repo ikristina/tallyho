@@ -57,5 +57,14 @@ jobs:
       - name: Compile (warnings as errors)
         run: mix compile --warnings-as-errors
 
-      - name: Run tests
-        run: mix test
+      - name: Static analysis (credo)
+        run: mix credo --strict
+
+      - name: Security scan (sobelow)
+        run: mix sobelow --config
+
+      - name: Dependency vulnerability audit (mix_audit)
+        run: mix deps.audit
+
+      - name: Run tests with coverage
+        run: mix test --cover

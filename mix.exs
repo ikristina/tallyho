@@ -10,6 +10,20 @@ defmodule TallyHo.MixProject do
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
+      test_coverage: [
+        # Generated/boilerplate modules we don't hand-write: real coverage
+        # of them measures Ecto/Phoenix's own generated code, not ours.
+        ignore_modules: [
+          TallyHo.Release,
+          TallyHo.Repo,
+          TallyHo.DataCase,
+          TallyHoWeb.CoreComponents,
+          TallyHoWeb.ErrorHTML,
+          TallyHoWeb.Telemetry,
+          TallyHo.Application
+        ],
+        summary: [threshold: 90]
+      ],
       compilers: [:phoenix_live_view] ++ Mix.compilers(),
       listeners: [Phoenix.CodeReloader]
     ]
@@ -48,7 +62,7 @@ defmodule TallyHo.MixProject do
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_live_view, "~> 1.2.0"},
       {:lazy_html, ">= 0.1.0", only: :test},
-      {:phoenix_live_dashboard, "~> 0.8.3"},
+      {:phoenix_live_dashboard, "~> 0.9"},
       {:esbuild, "~> 0.10", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.5", runtime: Mix.env() == :dev},
       {:heroicons,
@@ -71,8 +85,12 @@ defmodule TallyHo.MixProject do
       {:telemetry_poller, "~> 1.0"},
       {:gettext, "~> 1.0"},
       {:jason, "~> 1.2"},
-      {:dns_cluster, "~> 0.2.0"},
-      {:bandit, "~> 1.5"}
+      {:dns_cluster, "~> 0.3"},
+      {:bandit, "~> 1.5"},
+      {:decimal, "~> 3.0"},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:sobelow, "~> 0.15", only: [:dev, :test], runtime: false},
+      {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false}
     ]
   end
 
@@ -95,7 +113,15 @@ defmodule TallyHo.MixProject do
         "esbuild tallyho --minify",
         "phx.digest"
       ],
-      precommit: ["compile --warnings-as-errors", "deps.unlock --unused", "format", "test"]
+      precommit: [
+        "compile --warnings-as-errors",
+        "deps.unlock --unused",
+        "format",
+        "credo --strict",
+        "sobelow --config",
+        "deps.audit",
+        "test"
+      ]
     ]
   end
 end
