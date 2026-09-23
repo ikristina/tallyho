@@ -4,19 +4,15 @@ defmodule TallyHo.Billing.Invoicer do
   Uses Decimal for all monetary values to prevent IEEE 754 float inaccuracies.
   """
   alias Decimal, as: D
-
-  # Rates defined in USD
-  @rates %{
-    "api_requests" => D.new("0.001"),
-    "storage_gb" => D.new("0.05"),
-    "compute_hours" => D.new("0.10")
-  }
+  alias TallyHo.Usage.Metrics
 
   defmodule LineItem do
+    @moduledoc "One priced row of an invoice: a metric, its usage, and its cost."
     defstruct [:metric, :total_quantity, :unit_price, :total_amount]
   end
 
   defmodule Invoice do
+    @moduledoc "A customer's line items and total for a given set of events."
     defstruct [:customer_id, :line_items, :total_amount]
   end
 
@@ -29,7 +25,7 @@ defmodule TallyHo.Billing.Invoicer do
       |> Enum.group_by(& &1.metric)
       |> Enum.map(fn {metric, metric_events} ->
         total_quantity = Enum.reduce(metric_events, 0, fn e, acc -> acc + e.quantity end)
-        unit_price = Map.get(@rates, metric, D.new("0.00"))
+        unit_price = Metrics.rate_for(metric) || D.new("0.00")
         total_amount = D.mult(unit_price, D.new(total_quantity))
 
         %LineItem{

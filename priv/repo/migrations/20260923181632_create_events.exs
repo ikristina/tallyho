@@ -13,8 +13,10 @@ defmodule TallyHo.Repo.Migrations.CreateEvents do
       timestamps(type: :utc_datetime)
     end
 
-    # Crucial for billing: prevent duplicate event processing
-    create unique_index(:events, [:idempotency_key])
+    # Crucial for billing: prevent duplicate event processing per customer.
+    # Scoped to customer_id rather than global so two unrelated customers
+    # can't collide on the same key string.
+    create unique_index(:events, [:customer_id, :idempotency_key])
     create index(:events, [:customer_id, :timestamp])
   end
 end

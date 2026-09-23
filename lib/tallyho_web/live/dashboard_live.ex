@@ -1,7 +1,7 @@
 defmodule TallyHoWeb.DashboardLive do
   use TallyHoWeb, :live_view
-  alias TallyHo.Usage
   alias TallyHo.Billing.Invoicer
+  alias TallyHo.Usage
 
   @impl true
   def mount(_params, _session, socket) do
@@ -16,13 +16,12 @@ defmodule TallyHoWeb.DashboardLive do
       Usage.subscribe_customer(customer_id)
     end
 
-    events = Usage.list_customer_events(customer_id, 50)
-    invoice = Invoicer.calculate_invoice(customer_id, events)
+    events = Usage.list_customer_events(customer_id)
 
     {:noreply,
      socket
      |> assign(:customer_id, customer_id)
-     |> assign(:invoice, invoice)
+     |> assign_current_invoice()
      |> stream(:events, events, reset: true)}
   end
 
@@ -40,17 +39,28 @@ defmodule TallyHoWeb.DashboardLive do
   @impl true
   def handle_info({:event_ingested, event}, socket) do
     if event.customer_id == socket.assigns.customer_id do
-      # 1. Prepend new event to the LiveView stream
-      socket = stream_insert(socket, :events, event, at: 0)
-
-      # 2. Recalculate running invoice
-      events = Usage.list_customer_events(socket.assigns.customer_id, 100)
-      invoice = Invoicer.calculate_invoice(socket.assigns.customer_id, events)
-
-      {:noreply, assign(socket, :invoice, invoice)}
+      {:noreply,
+       socket
+       |> stream_insert(:events, event, at: 0)
+       |> assign_current_invoice()}
     else
       {:noreply, socket}
     end
+  end
+
+  # Recomputes the invoice from the DB for the customer's *current* UTC
+  # billing period, rather than from whatever events happen to be in the
+  # live activity stream. Same query on mount and on every PubSub update,
+  # so the total never depends on which code path last ran.
+  defp assign_current_invoice(socket) do
+    customer_id = socket.assigns.customer_id
+    period = Usage.current_billing_period()
+    line_inputs = Usage.invoice_line_inputs(customer_id, period)
+    invoice = Invoicer.calculate_invoice(customer_id, line_inputs)
+
+    socket
+    |> assign(:invoice, invoice)
+    |> assign(:period, period)
   end
 
   @impl true
@@ -102,6 +112,10 @@ defmodule TallyHoWeb.DashboardLive do
             </div>
             <p class="mt-2 text-xs text-indigo-200/70">
               Customer: <span class="font-mono text-white font-medium">{@customer_id}</span>
+            </p>
+            <p class="mt-1 text-xs text-indigo-200/70">
+              Billing period: <span class="font-mono text-white/90">{period_label(@period)}</span>
+              (UTC)
             </p>
             <div class="mt-6 pt-4 border-t border-indigo-800/50 flex items-center justify-between text-xs text-indigo-300">
               <span class="flex items-center gap-1.5">
@@ -196,5 +210,12 @@ defmodule TallyHoWeb.DashboardLive do
       </div>
     </Layouts.app>
     """
+  end
+
+  # `period_end` is exclusive (the first instant of next month), so the
+  # human-readable label shows the last actual day of the period, not it.
+  defp period_label({period_start, period_end}) do
+    last_day = Date.add(DateTime.to_date(period_end), -1)
+    "#{Calendar.strftime(period_start, "%b %-d")}–#{Calendar.strftime(last_day, "%b %-d, %Y")}"
   end
 end

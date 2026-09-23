@@ -37,6 +37,46 @@ defmodule TallyHo.Usage.EventTest do
       assert errors.quantity != nil
       assert errors.idempotency_key != nil
     end
+
+    test "invalid with an unrecognized metric" do
+      attrs = %{
+        "customer_id" => "cust_123",
+        "metric" => "totally_made_up_metric",
+        "quantity" => 5,
+        "idempotency_key" => "key_1"
+      }
+
+      changeset = Event.changeset(%Event{}, attrs)
+      refute changeset.valid?
+      assert errors_on(changeset).metric != nil
+    end
+
+    test "invalid with a timestamp far in the future" do
+      attrs = %{
+        "customer_id" => "cust_123",
+        "metric" => "api_requests",
+        "quantity" => 5,
+        "idempotency_key" => "key_1",
+        "timestamp" => DateTime.utc_now() |> DateTime.add(3600, :second)
+      }
+
+      changeset = Event.changeset(%Event{}, attrs)
+      refute changeset.valid?
+      assert errors_on(changeset).timestamp != nil
+    end
+
+    test "valid with a timestamp within the allowed clock-skew window" do
+      attrs = %{
+        "customer_id" => "cust_123",
+        "metric" => "api_requests",
+        "quantity" => 5,
+        "idempotency_key" => "key_1",
+        "timestamp" => DateTime.utc_now() |> DateTime.add(30, :second)
+      }
+
+      changeset = Event.changeset(%Event{}, attrs)
+      assert changeset.valid?
+    end
   end
 
   # Helper to transform changeset errors into readable map
