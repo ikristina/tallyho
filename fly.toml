@@ -29,6 +29,16 @@ kill_signal = 'SIGTERM'
     hard_limit = 1000
     soft_limit = 1000
 
+  # Hits the DB-backed health check (lib/tallyho_web/controllers/health_controller.ex)
+  # rather than relying on Fly's default bare TCP check, which would report
+  # healthy even if Postgres were unreachable.
+  [[http_service.checks]]
+    grace_period = '10s'
+    interval = '30s'
+    method = 'GET'
+    timeout = '5s'
+    path = '/api/health'
+
 [[vm]]
   memory = '512mb'
   cpu_kind = 'shared'

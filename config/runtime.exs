@@ -74,6 +74,31 @@ if config_env() == :prod do
 
   config :tallyho, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
+  # Shared-secret auth for the ingest API and dashboard — see
+  # lib/tallyho_web/plugs/require_api_key.ex and router.ex for why these
+  # are a single shared credential rather than per-customer auth.
+  ingest_api_key =
+    System.get_env("INGEST_API_KEY") ||
+      raise """
+      environment variable INGEST_API_KEY is missing.
+      You can generate one by calling: mix phx.gen.secret
+      """
+
+  dashboard_username =
+    System.get_env("DASHBOARD_USERNAME") ||
+      raise "environment variable DASHBOARD_USERNAME is missing."
+
+  dashboard_password =
+    System.get_env("DASHBOARD_PASSWORD") ||
+      raise """
+      environment variable DASHBOARD_PASSWORD is missing.
+      You can generate one by calling: mix phx.gen.secret
+      """
+
+  config :tallyho,
+    ingest_api_key: ingest_api_key,
+    dashboard_auth: [username: dashboard_username, password: dashboard_password]
+
   config :tallyho, TallyHoWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
     http: [

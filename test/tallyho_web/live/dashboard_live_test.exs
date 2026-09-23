@@ -3,7 +3,18 @@ defmodule TallyHoWeb.DashboardLiveTest do
   import Phoenix.LiveViewTest
   alias TallyHo.Usage
 
+  describe "without dashboard auth" do
+    test "GET /dashboard/:customer_id is rejected with 401", %{conn: conn} do
+      conn = get(conn, ~p"/dashboard/cust_test")
+      assert conn.status == 401
+    end
+  end
+
   describe "DashboardLive" do
+    setup %{conn: conn} do
+      {:ok, conn: with_dashboard_auth(conn)}
+    end
+
     test "mounts and displays empty state for customer", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/cust_test")
 

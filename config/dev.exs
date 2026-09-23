@@ -55,6 +55,14 @@ config :tallyho, TallyHoWeb.Endpoint,
 # Enable dev routes for dashboard and mailbox
 config :tallyho, dev_routes: true
 
+# Local-only credentials for the shared-secret auth added to the ingest API
+# and dashboard. Same rationale as the dev secret_key_base above: low risk
+# on localhost, never used in prod (config/runtime.exs requires real env
+# vars there and raises if they're missing).
+config :tallyho,
+  ingest_api_key: "dev-only-ingest-key",
+  dashboard_auth: [username: "admin", password: "admin"]
+
 # Do not include metadata nor timestamps in development logs
 config :logger, :default_formatter, format: "[$level] $message\n"
 

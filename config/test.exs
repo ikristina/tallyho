@@ -23,6 +23,11 @@ config :tallyho, TallyHoWeb.Endpoint,
 # In test we don't send emails
 config :tallyho, TallyHo.Mailer, adapter: Swoosh.Adapters.Test
 
+# Fixed values so tests can construct valid Authorization headers.
+config :tallyho,
+  ingest_api_key: "test-only-ingest-key",
+  dashboard_auth: [username: "test-admin", password: "test-admin"]
+
 # Disable swoosh api client as it is only required for production adapters
 config :swoosh, :api_client, false
 

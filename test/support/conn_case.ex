@@ -35,4 +35,17 @@ defmodule TallyHoWeb.ConnCase do
     TallyHo.DataCase.setup_sandbox(tags)
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
+
+  @doc "Adds the ingest API's Authorization: Bearer header, using the configured test key."
+  def with_api_key(conn) do
+    api_key = Application.fetch_env!(:tallyho, :ingest_api_key)
+    Plug.Conn.put_req_header(conn, "authorization", "Bearer " <> api_key)
+  end
+
+  @doc "Adds the dashboard's HTTP Basic Auth header, using the configured test credentials."
+  def with_dashboard_auth(conn) do
+    [username: username, password: password] = Application.fetch_env!(:tallyho, :dashboard_auth)
+    token = Base.encode64("#{username}:#{password}")
+    Plug.Conn.put_req_header(conn, "authorization", "Basic " <> token)
+  end
 end
