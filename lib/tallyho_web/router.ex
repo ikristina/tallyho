@@ -21,9 +21,11 @@ defmodule TallyHoWeb.Router do
   end
 
   # Other scopes may use custom stacks.
-  # scope "/api", TallyHoWeb do
-  #   pipe_through :api
-  # end
+  scope "/api", TallyHoWeb do
+    pipe_through :api
+
+    post "/events", EventController, :create
+  end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:tallyho, :dev_routes) do

@@ -2,49 +2,49 @@ defmodule TallyHo.Usage.EventTest do
   use ExUnit.Case, async: true
   alias TallyHo.Usage.Event
 
-  describe "new/1" do
-    test "builds an event with valid integer quantity" do
-      params = %{
+  describe "changeset/2" do
+    test "valid with valid attributes" do
+      attrs = %{
         "customer_id" => "cust_123",
         "metric" => "api_requests",
-        "quantity" => 42
+        "quantity" => 42,
+        "idempotency_key" => "key_1"
       }
 
-      assert {:ok, %Event{} = event} = Event.new(params)
-      assert event.customer_id == "cust_123"
-      assert event.metric == "api_requests"
-      assert event.quantity == 42
-      assert %DateTime{} = event.timestamp
+      changeset = Event.changeset(%Event{}, attrs)
+      assert changeset.valid?
     end
 
-    test "parses string quantity" do
-      params = %{
+    test "invalid with negative quantity" do
+      attrs = %{
         "customer_id" => "cust_123",
         "metric" => "api_requests",
-        "quantity" => "100"
+        "quantity" => -5,
+        "idempotency_key" => "key_1"
       }
 
-      assert {:ok, %Event{quantity: 100}} = Event.new(params)
+      changeset = Event.changeset(%Event{}, attrs)
+      refute changeset.valid?
+      assert %{quantity: ["must be greater than 0"]} = errors_on(changeset)
     end
 
-    test "returns error on negative quantity" do
-      params = %{
-        "customer_id" => "cust_123",
-        "metric" => "api_requests",
-        "quantity" => -5
-      }
-
-      assert {:error, :invalid_quantity} = Event.new(params)
+    test "invalid when required fields are missing" do
+      changeset = Event.changeset(%Event{}, %{})
+      refute changeset.valid?
+      errors = errors_on(changeset)
+      assert errors.customer_id != nil
+      assert errors.metric != nil
+      assert errors.quantity != nil
+      assert errors.idempotency_key != nil
     end
+  end
 
-    test "returns error when customer_id is blank" do
-      params = %{
-        "customer_id" => "   ",
-        "metric" => "api_requests",
-        "quantity" => 5
-      }
-
-      assert {:error, {:blank, :customer_id}} = Event.new(params)
-    end
+  # Helper to transform changeset errors into readable map
+  defp errors_on(changeset) do
+    Ecto.Changeset.traverse_errors(changeset, fn {message, opts} ->
+      Regex.replace(~r"%{(\w+)}", message, fn _, key ->
+        opts |> Keyword.get(String.to_existing_atom(key), key) |> to_string()
+      end)
+    end)
   end
 end
